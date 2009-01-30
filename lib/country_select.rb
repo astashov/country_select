@@ -4,7 +4,10 @@ module ActionView
     module FormOptionsHelper
       # Return select and option tags for the given object and method, using country_options_for_select to generate the list of option tags.
       def country_select(object, method, priority_countries = nil, options = {}, html_options = {})
-        InstanceTag.new(object, method, self, options.delete(:object)).to_country_select_tag(priority_countries, options, html_options)
+        InstanceTag.new(object, method, self, options.delete(:object)).to_country_or_state_select_tag(priority_countries, options, html_options, "country")
+      end
+      def state_select(object, method, priority_states = nil, options = {}, html_options = {})
+        InstanceTag.new(object, method, self, options.delete(:object)).to_country_or_state_select_tag(priority_states, options, html_options, "state")
       end
       # Returns a string of option tags for pretty much any country in the world. Supply a country name as +selected+ to
       # have it marked as the selected option tag. You can also supply an array of countries as +priority_countries+, so
@@ -12,15 +15,22 @@ module ActionView
       #
       # NOTE: Only the option tags are returned, you have to wrap this call in a regular HTML select tag.
       def country_options_for_select(selected = nil, priority_countries = nil)
+        country_or_state_options_for_select(selected, priority_countries, COUNTRIES)
+      end
+      
+      def state_options_for_select(selected = nil, priority_countries = nil)
+        country_or_state_options_for_select(selected, priority_countries, STATES)
+      end
+      
+      def country_or_state_options_for_select(selected = nil, priority_countries = nil, options = COUNTRIES)
         country_options = ""
-
         if priority_countries
           country_options += options_for_select(priority_countries, selected)
           country_options += "<option value=\"\" disabled=\"disabled\">-------------</option>\n"
         end
-
-        return country_options + options_for_select(COUNTRIES, selected)
+        return country_options + options_for_select(options, selected)
       end
+      
       # All the countries included in the country_options output.
       COUNTRIES = ["Afghanistan", "Aland Islands", "Albania", "Algeria", "American Samoa", "Andorra", "Angola",
         "Anguilla", "Antarctica", "Antigua And Barbuda", "Argentina", "Armenia", "Aruba", "Australia", "Austria",
@@ -59,16 +69,25 @@ module ActionView
         "United States", "United States Minor Outlying Islands", "Uruguay", "Uzbekistan", "Vanuatu", "Venezuela",
         "Viet Nam", "Virgin Islands, British", "Virgin Islands, U.S.", "Wallis and Futuna", "Western Sahara",
         "Yemen", "Zambia", "Zimbabwe"] unless const_defined?("COUNTRIES")
+      
+      STATES = ["Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", 
+        "District of Columbia", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", 
+        "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", 
+        "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", 
+        "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Puerto Rico", 
+        "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", 
+        "Washington", "West Virginia", "Wisconsin", "Wyoming"] unless const_defined?("STATES")
     end
     
     class InstanceTag
-      def to_country_select_tag(priority_countries, options, html_options)
+      def to_country_or_state_select_tag(priority, options, html_options, name)
         html_options = html_options.stringify_keys
         add_default_name_and_id(html_options)
         value = value(object)
+        method = "#{name}_options_for_select"
         content_tag("select",
           add_options(
-            country_options_for_select(value, priority_countries),
+            send(method, value, priority),
             options, value
           ), html_options
         )
@@ -78,6 +97,9 @@ module ActionView
     class FormBuilder
       def country_select(method, priority_countries = nil, options = {}, html_options = {})
         @template.country_select(@object_name, method, priority_countries, options.merge(:object => @object), html_options)
+      end
+      def state_select(method, priority_countries = nil, options = {}, html_options = {})
+        @template.state_select(@object_name, method, priority_countries, options.merge(:object => @object), html_options)
       end
     end
   end
